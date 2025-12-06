@@ -352,7 +352,7 @@ export default function App() {
 
     const renderCategoryModal = () => (
       <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <h2 className="text-lg font-bold text-slate-800">
               {catModalMode === 'list' ? t.manageCategories : (catModalMode === 'add' ? t.addCategory : t.editCategory)}
@@ -517,21 +517,21 @@ export default function App() {
             </div>
         )}
         
-        {/* Category Management Button */}
+        {/* Category Management Button - Highlighted */}
         <button 
           onClick={() => setActiveModal('categories')}
-          className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:border-primary/50 transition-all"
+          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-5 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-between group transform transition-all hover:scale-[1.01] active:scale-[0.99]"
         >
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-colors">
-              <List size={20} />
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <List size={22} className="text-white" />
             </div>
             <div className="text-left">
-              <h3 className="font-bold text-slate-800">{t.manageCategories}</h3>
-              <p className="text-xs text-slate-400">{state.categories.length} {t.category}</p>
+              <h3 className="font-bold text-white text-lg">{t.manageCategories}</h3>
+              <p className="text-xs text-indigo-100">{state.categories.length} {t.category}</p>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
             {state.language === Language.AR ? <LucideIcons.ChevronLeft size={16} /> : <LucideIcons.ChevronRight size={16} />}
           </div>
         </button>

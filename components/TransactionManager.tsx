@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Transaction, Category, Account, Language, TRANSLATIONS, TransactionType, Currency } from '../types';
-import { Plus, Search, Camera, X, Image as ImageIcon, Trash2, Filter, Edit2 } from 'lucide-react';
+import { Plus, Search, Camera, X, Image as ImageIcon, Trash2, Filter, Edit2, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 interface TransactionManagerProps {
@@ -26,6 +26,7 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
 }) => {
   const t = TRANSLATIONS[language];
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   
   // Form State
@@ -42,12 +43,11 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
   // Filtered categories for dropdown based on selected type
   const availableCategories = categories.filter(c => c.type === type);
 
-  // Reset category when type changes, but only if not editing to avoid overwriting existing
+  // Reset category when type changes
   useEffect(() => {
     if (availableCategories.length > 0 && !categoryId) {
       setCategoryId(availableCategories[0].id);
     }
-    // If switching type while adding new, reset category to first valid one
     if (!editingId && availableCategories.length > 0) {
        const isValid = availableCategories.find(c => c.id === categoryId);
        if (!isValid) setCategoryId(availableCategories[0].id);
@@ -106,9 +106,14 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm(t.confirmDelete)) {
-      onDeleteTransaction(id);
+  const handleDeleteClick = (id: string) => {
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = () => {
+    if (showDeleteConfirm) {
+      onDeleteTransaction(showDeleteConfirm);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -212,7 +217,7 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
                         <Edit2 size={18} />
                       </button>
                       <button 
-                        onClick={() => handleDelete(tr.id)}
+                        onClick={() => handleDeleteClick(tr.id)}
                         className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-full transition-all"
                         title={t.delete}
                       >
@@ -227,7 +232,34 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
         )}
       </div>
 
-      {/* Modal */}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center transform transition-all scale-100">
+            <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">{t.confirmDeleteTitle}</h3>
+            <p className="text-slate-500 mb-6">{t.confirmDeleteMessage}</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                {t.cancelDelete}
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30 transition-colors"
+              >
+                {t.deleteConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-100">

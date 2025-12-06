@@ -21,14 +21,23 @@ export const getFinancialAdvice = async (
   language: Language,
   currency: string
 ): Promise<string> => {
-  // Safety check for process.env
-  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : null;
+  // Robustly check for API Key in different environments
+  let apiKey = '';
+  
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    apiKey = process.env.API_KEY;
+  } 
+  // @ts-ignore - Check for Vite/Client side env injection if process is missing
+  else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    // @ts-ignore
+    apiKey = import.meta.env.VITE_API_KEY;
+  }
 
   if (!apiKey) {
-    console.warn("API Key is missing. AI features will be disabled.");
+    console.warn("API Key is missing. Check server configuration (Netlify Environment Variables).");
     return language === Language.AR 
-      ? "عذراً، مفتاح API غير متوفر. يرجى التحقق من إعدادات النظام." 
-      : "API Key is missing. Please check configuration.";
+      ? "عذراً، مفتاح API غير متوفر. يرجى التأكد من إضافة 'API_KEY' في إعدادات البيئة (Netlify Environment Variables)." 
+      : "API Key is missing. Please add 'API_KEY' to your Netlify Environment Variables.";
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
