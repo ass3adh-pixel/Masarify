@@ -1,0 +1,7 @@
+{
+  "name": "Masarify - Personal Budget Manager",
+  "description": "A secure, offline-first personal finance manager with Arabic/English support, budget tracking, and AI financial analysis.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
