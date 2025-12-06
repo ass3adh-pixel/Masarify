@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionManager } from './components/TransactionManager';
 import { getFinancialAdvice } from './services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info } from 'lucide-react';
+import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info, FileSpreadsheet, ChevronRight, ChevronLeft, Loader2, HelpCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 const STORAGE_KEY = 'masarify_data_v2';
@@ -24,11 +24,13 @@ const INITIAL_STATE: AppState = {
   pin: null,
 };
 
-// Available icons for categories
+// Available icons for categories - Expanded list
 const ICON_OPTIONS = [
   'Utensils', 'Car', 'ShoppingBag', 'Home', 'Film', 'Heart', 'FileText', 'Banknote', 
   'TrendingUp', 'Laptop', 'Coffee', 'Gift', 'Smartphone', 'Wifi', 'Zap', 'Droplet',
-  'Book', 'Briefcase', 'CreditCard', 'DollarSign', 'Music', 'Plane', 'ShoppingCart'
+  'Book', 'Briefcase', 'CreditCard', 'DollarSign', 'Music', 'Plane', 'ShoppingCart',
+  'Dumbbell', 'Gamepad2', 'GraduationCap', 'Hammer', 'Stethoscope', 'Baby', 'Dog', 
+  'Bus', 'Train', 'Fuel', 'Scissors', 'Shirt', 'Watch', 'Headphones', 'Palmtree'
 ];
 
 const COLOR_OPTIONS = [
@@ -47,7 +49,9 @@ export default function App() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        // Deep merge with initial state to ensure all fields exist
         let loadedState = { ...INITIAL_STATE, ...parsed, isAuthenticated: false };
+        // Ensure valid currency object
         if (typeof loadedState.currency === 'string') {
              loadedState.currency = SUPPORTED_CURRENCIES[0];
         }
@@ -74,7 +78,7 @@ export default function App() {
     const newTransaction: Transaction = { ...t, id: Date.now().toString() };
     const newTransactions = [newTransaction, ...state.transactions];
     setState(prev => ({ ...prev, transactions: newTransactions }));
-    checkBudgetAlerts(newTransactions);
+    checkBudgetAlerts(newTransactions, newTransaction);
   };
 
   const updateTransaction = (updatedT: Transaction) => {
@@ -82,7 +86,7 @@ export default function App() {
       t.id === updatedT.id ? updatedT : t
     );
     setState(prev => ({ ...prev, transactions: newTransactions }));
-    checkBudgetAlerts(newTransactions);
+    checkBudgetAlerts(newTransactions, updatedT);
   };
 
   const deleteTransaction = (id: string) => {
@@ -108,25 +112,49 @@ export default function App() {
     setState(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }));
   };
 
-  const checkBudgetAlerts = (transactions: Transaction[]) => {
+  const checkBudgetAlerts = (transactions: Transaction[], newTransaction?: Transaction) => {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
+    const t = TRANSLATIONS[state.language];
     const now = new Date();
     const currentMonth = now.getMonth();
+    
+    // 1. Check Global Monthly Limit
     const totalExpense = transactions
-      .filter(t => {
-        const d = new Date(t.date);
-        return d.getMonth() === currentMonth && t.type === 'EXPENSE';
+      .filter(tr => {
+        const d = new Date(tr.date);
+        return d.getMonth() === currentMonth && tr.type === 'EXPENSE';
       })
       .reduce((acc, curr) => acc + curr.amount, 0);
 
-    const percent = (totalExpense / state.budget.monthlyLimit) * 100;
-    const t = TRANSLATIONS[state.language];
+    const globalPercent = (totalExpense / state.budget.monthlyLimit) * 100;
 
-    if (percent >= 100) {
-      new Notification(t.warning, { body: `You have exceeded your monthly budget!` });
-    } else if (percent >= state.budget.alertThreshold) {
-      new Notification(t.warning, { body: `You have used ${percent.toFixed(0)}% of your monthly budget.` });
+    if (globalPercent >= 100) {
+      new Notification(t.warning, { body: `Global: You have exceeded your monthly budget!` });
+    } else if (globalPercent >= state.budget.alertThreshold) {
+      new Notification(t.warning, { body: `Global: You have used ${globalPercent.toFixed(0)}% of your monthly budget.` });
+    }
+
+    // 2. Check Specific Category Limit (if new transaction is expense and category has limit)
+    if (newTransaction && newTransaction.type === TransactionType.EXPENSE) {
+        const category = state.categories.find(c => c.id === newTransaction.categoryId);
+        if (category && category.budgetLimit && category.budgetLimit > 0) {
+            const catExpense = transactions
+                .filter(tr => {
+                    const d = new Date(tr.date);
+                    return d.getMonth() === currentMonth && tr.type === 'EXPENSE' && tr.categoryId === category.id;
+                })
+                .reduce((acc, curr) => acc + curr.amount, 0);
+            
+            const catPercent = (catExpense / category.budgetLimit) * 100;
+            const catName = state.language === Language.EN ? category.nameEn : category.nameAr;
+
+            if (catPercent >= 100) {
+                new Notification(t.warning, { body: `${catName}: You have exceeded the category budget!` });
+            } else if (catPercent >= state.budget.alertThreshold) {
+                new Notification(t.warning, { body: `${catName}: You have used ${catPercent.toFixed(0)}% of the category budget.` });
+            }
+        }
     }
   };
 
@@ -287,12 +315,17 @@ export default function App() {
     const [localPin, setLocalPin] = useState(state.pin);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
     const [activeModal, setActiveModal] = useState<'none' | 'categories' | 'about' | 'privacy' | 'terms' | 'contact'>('none');
+    
+    // Restore Modal State
+    const [showRestoreModal, setShowRestoreModal] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Category Manager State
     const [catModalMode, setCatModalMode] = useState<'list' | 'add' | 'edit'>('list');
     const [editingCat, setEditingCat] = useState<Category | null>(null);
     const [newCatData, setNewCatData] = useState<Partial<Category>>({ 
-      nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE 
+      nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE, budgetLimit: 0 
     });
 
     const handleSave = () => {
@@ -305,28 +338,95 @@ export default function App() {
       setTimeout(() => setSaveStatus('idle'), 3000);
     };
 
-    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleRestoreClick = () => {
+      setShowRestoreModal(true);
+    };
+
+    const performImport = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (window.confirm(t.confirmImport)) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
-            const data = JSON.parse(ev.target?.result as string);
-            if (data.transactions && Array.isArray(data.transactions) && data.categories) {
-              setState({ ...INITIAL_STATE, ...data, isAuthenticated: true });
+      setIsRestoring(true);
+      
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          // Validation
+          if (data.transactions && Array.isArray(data.transactions) && data.categories) {
+            
+            // Construct new state
+            const newState = { 
+              ...INITIAL_STATE, 
+              ...data, 
+              isAuthenticated: true 
+            };
+
+            // Clear existing data to be safe
+            localStorage.clear();
+
+            // Force save to localStorage immediately
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+            
+            // Brief delay for UX then reload
+            setTimeout(() => {
               alert(t.importSuccess);
-            } else {
-              throw new Error("Invalid structure");
-            }
-          } catch(err) { 
-            alert(t.importError); 
+              window.location.reload(); // Reload to ensure clean state
+            }, 1000);
+            
+          } else {
+            throw new Error("Invalid structure");
           }
-        };
-        reader.readAsText(file);
+        } catch(err) { 
+          console.error(err);
+          alert(t.importError); 
+          setIsRestoring(false);
+          setShowRestoreModal(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        alert(t.importError);
+        setIsRestoring(false);
+        setShowRestoreModal(false);
       }
-      e.target.value = ''; // Reset
+
+      reader.readAsText(file);
+      
+      // Reset input
+      e.target.value = ''; 
+    };
+
+    const handleExportExcel = () => {
+      // Create CSV content with BOM for Arabic support
+      const headers = ['Date', 'Amount', 'Type', 'Category', 'Account', 'Note'];
+      const rows = state.transactions.map(t => {
+        const cat = state.categories.find(c => c.id === t.categoryId);
+        const acc = state.accounts.find(a => a.id === t.accountId);
+        const catName = state.language === Language.EN ? cat?.nameEn : cat?.nameAr;
+        const accName = state.language === Language.EN ? acc?.nameEn : acc?.nameAr;
+        // Escape commas in note
+        const note = t.note ? `"${t.note.replace(/"/g, '""')}"` : '';
+        
+        return [
+          t.date.split('T')[0],
+          t.amount,
+          t.type,
+          catName || 'Unknown',
+          accName || 'Unknown',
+          note
+        ].join(',');
+      });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `masarify_export_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     };
 
     const handleSaveCategory = () => {
@@ -337,7 +437,8 @@ export default function App() {
         nameAr: newCatData.nameAr,
         icon: newCatData.icon || 'Circle',
         color: newCatData.color || '#10b981',
-        type: newCatData.type || TransactionType.EXPENSE
+        type: newCatData.type || TransactionType.EXPENSE,
+        budgetLimit: newCatData.budgetLimit || 0
       };
 
       if (catModalMode === 'edit' && editingCat) {
@@ -346,12 +447,16 @@ export default function App() {
         addCategory(catPayload);
       }
       setCatModalMode('list');
-      setNewCatData({ nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE });
+      setNewCatData({ nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE, budgetLimit: 0 });
       setEditingCat(null);
     };
 
+    const remainingBudget = state.budget.monthlyLimit - state.categories
+        .filter(c => c.type === TransactionType.EXPENSE && c.id !== editingCat?.id)
+        .reduce((sum, c) => sum + (c.budgetLimit || 0), 0);
+
     const renderCategoryModal = () => (
-      <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <h2 className="text-lg font-bold text-slate-800">
@@ -368,9 +473,20 @@ export default function App() {
           <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
             {catModalMode === 'list' ? (
               <div className="space-y-3">
+                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-4 flex justify-between items-center">
+                    <div>
+                        <p className="text-xs text-emerald-600 font-bold uppercase tracking-wide">Monthly Budget Calculator</p>
+                        <p className="text-lg font-bold text-emerald-800">{state.currency.symbol} {state.budget.monthlyLimit.toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-emerald-600 font-bold uppercase tracking-wide">Unallocated</p>
+                        <p className="text-lg font-bold text-emerald-800">{state.currency.symbol} {remainingBudget.toLocaleString()}</p>
+                    </div>
+                </div>
+
                 <button 
                   onClick={() => {
-                    setNewCatData({ nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE });
+                    setNewCatData({ nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE, budgetLimit: 0 });
                     setCatModalMode('add');
                   }}
                   className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-primary font-bold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2"
@@ -379,7 +495,7 @@ export default function App() {
                 </button>
                 {state.categories.map(cat => {
                   // @ts-ignore
-                  const Icon = LucideIcons[cat.icon] || LucideIcons.Circle;
+                  const Icon = LucideIcons[iconName] || LucideIcons.Circle;
                   return (
                     <div key={cat.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
                       <div className="flex items-center gap-3">
@@ -388,9 +504,16 @@ export default function App() {
                         </div>
                         <div>
                            <p className="font-bold text-slate-800">{state.language === Language.EN ? cat.nameEn : cat.nameAr}</p>
-                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${cat.type === TransactionType.INCOME ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                             {cat.type === TransactionType.INCOME ? t.income : t.expense}
-                           </span>
+                           <div className="flex items-center gap-2">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${cat.type === TransactionType.INCOME ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                              {cat.type === TransactionType.INCOME ? t.income : t.expense}
+                            </span>
+                            {cat.budgetLimit && cat.budgetLimit > 0 && (
+                                <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                    Limit: {cat.budgetLimit}
+                                </span>
+                            )}
+                           </div>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -426,23 +549,57 @@ export default function App() {
                    <input value={newCatData.nameAr} onChange={e => setNewCatData({...newCatData, nameAr: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-right" dir="rtl" />
                  </div>
                  
+                 {newCatData.type === TransactionType.EXPENSE && (
+                     <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-xs font-bold text-slate-500">{t.categoryLimit} ({state.currency.symbol})</label>
+                            <span className="text-[10px] text-emerald-600 font-bold">Avail: {remainingBudget + (editingCat?.budgetLimit || 0)}</span>
+                        </div>
+                        <input 
+                            type="number" 
+                            value={newCatData.budgetLimit || ''} 
+                            onChange={e => setNewCatData({...newCatData, budgetLimit: parseFloat(e.target.value)})} 
+                            className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary" 
+                            placeholder="0 (Unlimited)"
+                            max={remainingBudget + (editingCat?.budgetLimit || 0)}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Leave 0 for no limit on this category.</p>
+                     </div>
+                 )}
+
                  <div>
                    <label className="block text-xs font-bold text-slate-500 mb-2">{t.selectColor}</label>
-                   <div className="flex flex-wrap gap-2">
+                   <div className="flex flex-wrap gap-2 items-center">
                      {COLOR_OPTIONS.map(c => (
-                       <button key={c} onClick={() => setNewCatData({...newCatData, color: c})} className={`w-8 h-8 rounded-full border-2 ${newCatData.color === c ? 'border-slate-800 scale-110' : 'border-transparent'}`} style={{backgroundColor: c}} />
+                       <button 
+                         key={c} 
+                         onClick={() => setNewCatData({...newCatData, color: c})} 
+                         className={`w-8 h-8 rounded-full border-2 transition-transform ${newCatData.color === c ? 'border-slate-800 scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`} 
+                         style={{backgroundColor: c}} 
+                       />
                      ))}
+                     
+                     {/* Custom Color Input */}
+                     <label className={`relative w-8 h-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-transform overflow-hidden ${!COLOR_OPTIONS.includes(newCatData.color || '') ? 'border-slate-800 scale-110 shadow-sm' : 'border-slate-200 opacity-70 hover:opacity-100 hover:scale-105'}`} style={{ background: !COLOR_OPTIONS.includes(newCatData.color || '') ? newCatData.color : 'conic-gradient(from 180deg at 50% 50%, #FF0000 0deg, #00FF00 120deg, #0000FF 240deg, #FF0000 360deg)' }}>
+                        <input 
+                            type="color" 
+                            value={newCatData.color}
+                            onChange={(e) => setNewCatData({...newCatData, color: e.target.value})}
+                            className="opacity-0 w-full h-full cursor-pointer absolute inset-0"
+                        />
+                        <Plus size={14} className={`text-white drop-shadow-md ${!COLOR_OPTIONS.includes(newCatData.color || '') ? 'hidden' : 'block'}`} />
+                     </label>
                    </div>
                  </div>
 
                  <div>
                    <label className="block text-xs font-bold text-slate-500 mb-2">{t.selectIcon}</label>
-                   <div className="grid grid-cols-6 gap-2">
+                   <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar p-1">
                      {ICON_OPTIONS.map(iconName => {
                        // @ts-ignore
                        const Icon = LucideIcons[iconName] || LucideIcons.Circle;
                        return (
-                         <button key={iconName} onClick={() => setNewCatData({...newCatData, icon: iconName})} className={`p-2 rounded-xl flex items-center justify-center border ${newCatData.icon === iconName ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100'}`}>
+                         <button key={iconName} onClick={() => setNewCatData({...newCatData, icon: iconName})} className={`p-2 rounded-xl flex items-center justify-center border transition-all ${newCatData.icon === iconName ? 'bg-primary text-white border-primary shadow-md scale-105' : 'bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100 hover:scale-105'}`}>
                            <Icon size={20} />
                          </button>
                        );
@@ -470,40 +627,116 @@ export default function App() {
       }
 
       return (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-             <div className="bg-primary p-6 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200">
+             <div className="bg-gradient-to-r from-primary to-teal-600 p-6 text-white flex justify-between items-center sticky top-0 z-10">
                <h2 className="text-xl font-bold">{title}</h2>
                <button onClick={() => setActiveModal('none')}><X size={24} /></button>
              </div>
              <div className="p-6">
                 {type === 'contact' ? (
-                  <div className="space-y-4">
-                     <p className="text-slate-600 mb-4">{t.contactText}</p>
-                     <a 
-                       href={`mailto:codexazi@gmail.com?subject=Masarify Support`}
-                       className="block w-full bg-primary text-white text-center py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primaryDark transition-colors"
-                     >
-                       {t.send} {t.message}
-                     </a>
+                  <div className="space-y-6">
+                     <p className="text-slate-600 leading-relaxed">{t.contactText}</p>
+                     
+                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center space-y-4">
+                       <Mail size={40} className="mx-auto text-primary" />
+                       <div>
+                         <h3 className="font-bold text-slate-800">Email Support</h3>
+                         <p className="text-sm text-slate-500 mt-1">codexazi@gmail.com</p>
+                       </div>
+                       
+                       <form 
+                         name="contact" 
+                         method="POST" 
+                         data-netlify="true" 
+                         className="space-y-3 text-left mt-4"
+                         onSubmit={(e) => {
+                             e.preventDefault();
+                             const formData = new FormData(e.target as HTMLFormElement);
+                             fetch('/', {
+                                 method: 'POST',
+                                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                 body: new URLSearchParams(formData as any).toString()
+                             }).then(() => alert(t.savedSuccess)).catch(error => alert(error));
+                         }}
+                       >
+                           <input type="hidden" name="form-name" value="contact" />
+                           <input type="email" name="email" required placeholder="Your Email" className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm" />
+                           <textarea name="message" required placeholder={t.message} className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm min-h-[100px]"></textarea>
+                           <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primaryDark transition-colors">
+                               {t.send}
+                           </button>
+                       </form>
+                     </div>
                   </div>
                 ) : (
-                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">{content}</p>
+                  <div className="prose prose-slate prose-sm max-w-none">
+                    <p className="text-slate-600 leading-relaxed whitespace-pre-line">{content}</p>
+                  </div>
                 )}
              </div>
              <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
-                <span className="text-xs text-slate-400">Masarify v2.1.0</span>
+                <span className="text-xs text-slate-400">Masarify v2.1.0 • Professional Edition</span>
              </div>
           </div>
         </div>
       );
     };
 
+    const InfoRow = ({ icon: Icon, label, onClick }: any) => (
+      <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors group">
+         <div className="flex items-center gap-3 text-slate-700 font-medium">
+            <Icon size={20} className="text-slate-400 group-hover:text-primary transition-colors" />
+            <span>{label}</span>
+         </div>
+         {state.language === Language.AR ? <ChevronLeft size={16} className="text-slate-300"/> : <ChevronRight size={16} className="text-slate-300"/>}
+      </button>
+    );
+
     return (
       <div className="max-w-xl mx-auto space-y-6 pb-24">
+        {/* Hidden Input for Restore - Moved outside modal to prevent unmounting issues */}
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept=".json" 
+            onChange={performImport} 
+        />
+
         {/* Modals */}
         {activeModal === 'categories' && renderCategoryModal()}
         {['about', 'privacy', 'terms', 'contact'].includes(activeModal) && renderStaticModal(activeModal as any)}
+        
+        {/* Restore Warning Modal */}
+        {showRestoreModal && (
+          <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
+             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center">
+                {isRestoring ? (
+                  <div className="py-8 flex flex-col items-center">
+                     <Loader2 size={48} className="text-primary animate-spin mb-4" />
+                     <p className="font-bold text-slate-700">Restoring Data...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500">
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Overwrite Data?</h3>
+                    <p className="text-slate-500 mb-6 text-sm leading-relaxed whitespace-pre-line">{t.confirmImport}</p>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowRestoreModal(false)} className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">
+                            {t.cancel}
+                        </button>
+                        <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/30">
+                            Yes, Restore
+                        </button>
+                    </div>
+                  </>
+                )}
+             </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-slate-800">{t.settings}</h1>
@@ -520,19 +753,19 @@ export default function App() {
         {/* Category Management Button - Highlighted */}
         <button 
           onClick={() => setActiveModal('categories')}
-          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-5 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-between group transform transition-all hover:scale-[1.01] active:scale-[0.99]"
+          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-5 rounded-2xl shadow-lg shadow-indigo-200/50 flex items-center justify-between group transform transition-all hover:scale-[1.01] active:scale-[0.99]"
         >
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <List size={22} className="text-white" />
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <List size={24} className="text-white" />
             </div>
             <div className="text-left">
               <h3 className="font-bold text-white text-lg">{t.manageCategories}</h3>
-              <p className="text-xs text-indigo-100">{state.categories.length} {t.category}</p>
+              <p className="text-xs text-indigo-100 opacity-90">{state.categories.length} {t.category}</p>
             </div>
           </div>
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
-            {state.language === Language.AR ? <LucideIcons.ChevronLeft size={16} /> : <LucideIcons.ChevronRight size={16} />}
+            {state.language === Language.AR ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </div>
         </button>
 
@@ -641,41 +874,64 @@ export default function App() {
         <div className="sticky bottom-6 z-10">
             <button 
                 onClick={handleSave}
-                className="w-full bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
                 <Save size={20} />
                 {t.save}
             </button>
         </div>
 
-        {/* Data */}
+        {/* Data & Backup */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-          <h2 className="font-bold text-slate-700 border-b pb-2">{t.export} / {t.import}</h2>
-          <div className="flex gap-4">
-            <button onClick={() => {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-                const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", dataStr);
-                downloadAnchorNode.setAttribute("download", "masarify_backup.json");
-                document.body.appendChild(downloadAnchorNode);
-                downloadAnchorNode.click();
-                downloadAnchorNode.remove();
-            }} className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 rounded-xl hover:bg-slate-200 text-slate-700 font-medium transition-colors">
-              <Download size={18} /> {t.export}
-            </button>
-            <label className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 rounded-xl hover:bg-slate-200 text-slate-700 font-medium cursor-pointer transition-colors">
-              <Upload size={18} /> {t.import}
-              <input type="file" className="hidden" accept=".json" onChange={handleImport} />
-            </label>
+          <h2 className="font-bold text-slate-700 border-b pb-2">Backup & Restore</h2>
+          
+          <div className="flex flex-col gap-3">
+             <div className="grid grid-cols-2 gap-3">
+                {/* JSON Export */}
+                <button onClick={() => {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", `masarify_backup_${new Date().toISOString().slice(0,10)}.json`);
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                }} className="flex flex-col items-center justify-center gap-1 py-4 bg-slate-50 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors border border-slate-200">
+                  <Download size={20} /> 
+                  <span className="text-xs font-bold">{t.export}</span>
+                </button>
+
+                {/* Excel Export */}
+                <button onClick={handleExportExcel} className="flex flex-col items-center justify-center gap-1 py-4 bg-green-50 rounded-xl hover:bg-green-100 text-green-700 transition-colors border border-green-200">
+                  <FileSpreadsheet size={20} /> 
+                  <span className="text-xs font-bold">{t.exportExcel}</span>
+                </button>
+             </div>
+
+             {/* Restore Button */}
+             <button onClick={handleRestoreClick} className="flex items-center justify-center gap-2 py-3 bg-blue-50 rounded-xl hover:bg-blue-100 text-blue-700 font-bold transition-colors border border-blue-200 mt-1">
+                <Upload size={18} /> {t.import}
+             </button>
           </div>
         </div>
 
-        {/* Footer Links */}
-        <div className="grid grid-cols-2 gap-4 pt-4">
-           <button onClick={() => setActiveModal('about')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary"><Info size={16}/> {t.aboutUs}</button>
-           <button onClick={() => setActiveModal('contact')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary"><Mail size={16}/> {t.contactUs}</button>
-           <button onClick={() => setActiveModal('privacy')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary"><Shield size={16}/> {t.privacyPolicy}</button>
-           <button onClick={() => setActiveModal('terms')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary"><FileText size={16}/> {t.termsOfService}</button>
+        {/* Support Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+           <h2 className="font-bold text-slate-700 p-6 pb-2 border-b border-slate-50">Support</h2>
+           <div>
+              <InfoRow icon={Mail} label={t.contactUs} onClick={() => setActiveModal('contact')} />
+              <InfoRow icon={HelpCircle} label="Help & FAQ" onClick={() => alert("Coming Soon!")} />
+           </div>
+        </div>
+
+        {/* Legal & Info Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+           <h2 className="font-bold text-slate-700 p-6 pb-2 border-b border-slate-50">Legal & Information</h2>
+           <div>
+              <InfoRow icon={Info} label={t.aboutUs} onClick={() => setActiveModal('about')} />
+              <InfoRow icon={Shield} label={t.privacyPolicy} onClick={() => setActiveModal('privacy')} />
+              <InfoRow icon={FileText} label={t.termsOfService} onClick={() => setActiveModal('terms')} />
+           </div>
         </div>
         
         {/* Ad Space */}
@@ -703,7 +959,7 @@ export default function App() {
         return false;
       }}
     >
-      {currentView === View.DASHBOARD && <Dashboard transactions={state.transactions} budget={state.budget} language={state.language} currency={state.currency} />}
+      {currentView === View.DASHBOARD && <Dashboard transactions={state.transactions} categories={state.categories} budget={state.budget} language={state.language} currency={state.currency} />}
       {currentView === View.TRANSACTIONS && (
         <TransactionManager 
           transactions={state.transactions} 

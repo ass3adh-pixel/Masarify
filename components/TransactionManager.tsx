@@ -144,20 +144,30 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
   );
 
   return (
-    <div className="h-full">
+    <div className="h-full relative pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">{t.transactions}</h1>
+        {/* Desktop Button - Only visible on Large Screens (lg) to prevent overlap on tablets/mobile */}
         <button 
           onClick={openAddModal}
-          className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+          className="hidden lg:flex bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95"
         >
           <Plus size={20} />
-          <span className="hidden md:inline font-medium">{t.addTransaction}</span>
+          <span className="font-medium">{t.addTransaction}</span>
         </button>
       </div>
 
-      {/* Search */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4 flex items-center gap-3">
+      {/* Floating Action Button (FAB) - Visible on Mobile AND Tablets (up to lg) */}
+      <button
+        onClick={openAddModal}
+        className={`lg:hidden fixed bottom-24 ${language === Language.AR ? 'left-6' : 'right-6'} bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-full shadow-lg shadow-emerald-500/40 z-40 hover:bg-emerald-700 active:scale-90 transition-all flex items-center justify-center ring-4 ring-slate-50`}
+        aria-label={t.addTransaction}
+      >
+        <Plus size={28} />
+      </button>
+
+      {/* Search - Sticky only on Desktop to save space on mobile */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4 flex items-center gap-3 sticky top-16 z-30 lg:top-20">
         <Search className="text-slate-400" size={20} />
         <input 
           type="text" 
@@ -232,9 +242,9 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - High Z-Index */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center transform transition-all scale-100">
             <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
               <AlertTriangle size={32} />
@@ -259,9 +269,9 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal - High Z-Index */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-100">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">

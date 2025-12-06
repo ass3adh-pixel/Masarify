@@ -12,11 +12,20 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const MasarifyLogo = ({ className = "w-8 h-8", light = false }: { className?: string, light?: boolean }) => (
+const MasarifyLogo = ({ className = "w-10 h-10", light = false }: { className?: string, light?: boolean }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100" height="100" rx="20" fill={light ? "white" : "#10b981"} />
-    <path d="M30 70L30 30L50 50L70 30L70 70" stroke={light ? "#10b981" : "white"} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="75" cy="25" r="5" fill="#fbbf24" />
+    <defs>
+      <linearGradient id="logoGradient" x1="0" y1="100" x2="100" y2="0">
+        <stop offset="0%" stopColor={light ? "#ffffff" : "#10b981"} />
+        <stop offset="100%" stopColor={light ? "#e2e8f0" : "#047857"} />
+      </linearGradient>
+    </defs>
+    {/* Abstract Wallet/Card shape */}
+    <rect x="10" y="25" width="80" height="50" rx="12" fill="url(#logoGradient)" />
+    {/* Growth Chart Line */}
+    <path d="M25 60 L40 45 L55 55 L75 35" stroke={light ? "#10b981" : "white"} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+    {/* Dot */}
+    <circle cx="75" cy="35" r="5" fill={light ? "#10b981" : "#fbbf24"} stroke={light ? "#10b981" : "white"} strokeWidth="2" />
   </svg>
 );
 
@@ -48,26 +57,30 @@ export const Layout: React.FC<LayoutProps> = ({
   // Lock Screen
   if (pin && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary to-emerald-800 flex flex-col items-center justify-center p-4" dir={dir}>
-        <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-white/20">
-          <div className="bg-white p-4 rounded-2xl shadow-lg inline-block mb-6">
-            <MasarifyLogo className="w-16 h-16" light />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-emerald-900 flex flex-col items-center justify-center p-4 relative overflow-hidden" dir={dir}>
+        {/* Background decorative blobs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-white/20 relative z-10">
+          <div className="bg-white p-5 rounded-2xl shadow-xl inline-block mb-8 transform hover:scale-105 transition-transform duration-300">
+            <MasarifyLogo className="w-20 h-20" light />
           </div>
-          <h2 className="text-2xl font-bold mb-2 text-white">{t.locked}</h2>
-          <p className="text-white/70 mb-8 text-sm">Masarify Budget Manager</p>
+          <h2 className="text-3xl font-bold mb-2 text-white">{t.locked}</h2>
+          <p className="text-emerald-100/80 mb-8 text-sm font-medium tracking-wide">Masarify Premium Security</p>
           
           <input
             type="password"
             maxLength={4}
             value={inputPin}
             onChange={(e) => setInputPin(e.target.value)}
-            className={`w-full text-center text-3xl tracking-[1em] p-4 bg-white/20 border-2 rounded-2xl mb-8 focus:outline-none focus:bg-white/30 text-white placeholder-white/30 transition-all ${error ? 'border-rose-400 shake' : 'border-white/20 focus:border-white/50'}`}
+            className={`w-full text-center text-4xl tracking-[0.5em] p-4 bg-black/20 border-2 rounded-2xl mb-8 focus:outline-none focus:bg-black/30 text-white placeholder-white/20 transition-all ${error ? 'border-rose-400 shake' : 'border-white/10 focus:border-emerald-400/50'}`}
             placeholder="••••"
           />
           
           <button
             onClick={handleUnlock}
-            className="w-full bg-white text-primary py-4 rounded-xl font-bold text-lg hover:bg-emerald-50 transition-colors shadow-lg active:scale-95 duration-200"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-xl font-bold text-lg hover:from-emerald-400 hover:to-teal-400 transition-all shadow-lg shadow-emerald-900/20 active:scale-95 duration-200"
           >
             {t.unlock}
           </button>
@@ -78,37 +91,48 @@ export const Layout: React.FC<LayoutProps> = ({
 
   // Main Layout
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0 md:pl-64 transition-all" dir={dir}>
-      {/* Desktop Sidebar */}
-      <aside className={`fixed top-0 bottom-0 ${language === Language.AR ? 'right-0' : 'left-0'} w-64 bg-white border-r border-gray-200 hidden md:flex flex-col z-20`}>
-        <div className="p-8 flex items-center gap-3 border-b border-gray-50">
-          <MasarifyLogo />
-          <span className="text-2xl font-extrabold text-gray-800 tracking-tight">Masarify</span>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          <NavButton active={currentView === View.DASHBOARD} onClick={() => setCurrentView(View.DASHBOARD)} icon={<LayoutDashboard size={20} />} label={t.dashboard} />
-          <NavButton active={currentView === View.TRANSACTIONS} onClick={() => setCurrentView(View.TRANSACTIONS)} icon={<Receipt size={20} />} label={t.transactions} />
-          <NavButton active={currentView === View.REPORTS} onClick={() => setCurrentView(View.REPORTS)} icon={<PieChart size={20} />} label={t.reports} />
-          <NavButton active={currentView === View.ADVISOR} onClick={() => setCurrentView(View.ADVISOR)} icon={<Bot size={20} />} label={t.advisor} />
-          <NavButton active={currentView === View.SETTINGS} onClick={() => setCurrentView(View.SETTINGS)} icon={<Settings size={20} />} label={t.settings} />
-        </nav>
+    <div className="min-h-screen bg-slate-50 transition-all" dir={dir}>
+      
+      {/* Top Navigation Header (Replaces Sidebar) */}
+      <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-b border-slate-200 z-50 h-16 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+          
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20">
+              <MasarifyLogo className="w-6 h-6" light />
+            </div>
+            <div className="flex flex-col">
+               <span className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Masarify</span>
+            </div>
+          </div>
 
-        <div className="p-6 text-center text-xs text-gray-400">
-           v2.0.0 • Offline Mode
-        </div>
-      </aside>
+          {/* Desktop Navigation Items (Hidden on Mobile) */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-50/80 p-1 rounded-xl border border-slate-100/50">
+             <TopNavButton active={currentView === View.DASHBOARD} onClick={() => setCurrentView(View.DASHBOARD)} icon={<LayoutDashboard size={18} />} label={t.dashboard} />
+             <TopNavButton active={currentView === View.TRANSACTIONS} onClick={() => setCurrentView(View.TRANSACTIONS)} icon={<Receipt size={18} />} label={t.transactions} />
+             <TopNavButton active={currentView === View.REPORTS} onClick={() => setCurrentView(View.REPORTS)} icon={<PieChart size={18} />} label={t.reports} />
+             <TopNavButton active={currentView === View.ADVISOR} onClick={() => setCurrentView(View.ADVISOR)} icon={<Bot size={18} />} label={t.advisor} highlight />
+             <TopNavButton active={currentView === View.SETTINGS} onClick={() => setCurrentView(View.SETTINGS)} icon={<Settings size={18} />} label={t.settings} />
+          </nav>
 
-      {/* Content Area */}
-      <main className="max-w-7xl mx-auto p-4 md:p-8 min-h-screen">
+          {/* Spacer / Version Badge */}
+          <div className="hidden md:flex items-center gap-2">
+             <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-200">PRO</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Content Area - Increased Top Padding from pt-24 to pt-32 to fix overlap */}
+      <main className="max-w-7xl mx-auto p-4 md:p-8 pt-32 pb-24 md:pb-8 min-h-screen">
         {children}
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <div className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 md:hidden flex justify-around p-3 pb-safe z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]`}>
+      {/* Mobile Bottom Navigation (Visible only on small screens) */}
+      <div className={`fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 md:hidden flex justify-around p-3 pb-safe z-30 shadow-[0_-4px_30px_rgba(0,0,0,0.05)]`}>
         <MobileNavButton active={currentView === View.DASHBOARD} onClick={() => setCurrentView(View.DASHBOARD)} icon={<LayoutDashboard size={24} />} />
         <MobileNavButton active={currentView === View.TRANSACTIONS} onClick={() => setCurrentView(View.TRANSACTIONS)} icon={<Receipt size={24} />} />
-        <MobileNavButton active={currentView === View.ADVISOR} onClick={() => setCurrentView(View.ADVISOR)} icon={<div className="bg-primary p-3 rounded-full -mt-10 shadow-lg shadow-primary/30 text-white ring-4 ring-gray-50"><Bot size={24} /></div>} />
+        <MobileNavButton active={currentView === View.ADVISOR} onClick={() => setCurrentView(View.ADVISOR)} icon={<div className="bg-gradient-to-tr from-emerald-500 to-teal-400 p-4 rounded-full -mt-12 shadow-xl shadow-emerald-500/30 text-white ring-8 ring-slate-50 border border-white/20"><Bot size={28} /></div>} />
         <MobileNavButton active={currentView === View.REPORTS} onClick={() => setCurrentView(View.REPORTS)} icon={<PieChart size={24} />} />
         <MobileNavButton active={currentView === View.SETTINGS} onClick={() => setCurrentView(View.SETTINGS)} icon={<Settings size={24} />} />
       </div>
@@ -116,12 +140,16 @@ export const Layout: React.FC<LayoutProps> = ({
   );
 };
 
-const NavButton = ({ active, onClick, icon, label }: any) => (
+const TopNavButton = ({ active, onClick, icon, label, highlight }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 ${active ? 'bg-emerald-50 text-primary font-bold shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 text-sm font-bold ${
+      active 
+        ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200' 
+        : 'text-slate-500 hover:bg-white hover:text-slate-700'
+    }`}
   >
-    {icon}
+    <span className={highlight && !active ? 'text-emerald-600' : ''}>{icon}</span>
     <span>{label}</span>
   </button>
 );
@@ -129,7 +157,7 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 const MobileNavButton = ({ active, onClick, icon }: any) => (
   <button
     onClick={onClick}
-    className={`p-2 rounded-xl transition-colors ${active ? 'text-primary' : 'text-slate-400'}`}
+    className={`p-2 rounded-2xl transition-all duration-300 ${active ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-slate-600'}`}
   >
     {icon}
   </button>
