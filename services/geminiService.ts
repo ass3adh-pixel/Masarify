@@ -21,11 +21,17 @@ export const getFinancialAdvice = async (
   language: Language,
   currency: string
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return "API Key is missing. Please check configuration.";
+  // Safety check for process.env
+  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : null;
+
+  if (!apiKey) {
+    console.warn("API Key is missing. AI features will be disabled.");
+    return language === Language.AR 
+      ? "عذراً، مفتاح API غير متوفر. يرجى التحقق من إعدادات النظام." 
+      : "API Key is missing. Please check configuration.";
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
   
   const simplifiedData = processTransactionsForAI(transactions, categories, currency);
   const dataString = JSON.stringify(simplifiedData.slice(0, 50)); // Limit to last 50 for context
