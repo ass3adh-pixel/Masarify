@@ -352,6 +352,8 @@ export default function App() {
       // Use trim() to ignore accidental spaces
       if (deleteKeyword.trim() === 'DELETE') {
         localStorage.clear();
+        // Show explicit success alert to confirm action
+        alert(TRANSLATIONS[state.language].resetSuccess);
         // Use href='/'; to properly reset the app state without 404 errors on some hosts
         window.location.href = '/';
       }
