@@ -3,21 +3,21 @@ import { Transaction, Category, Language } from "../types";
 
 // Helper to safely get the API Key in different environments (Vite, CRA, Node)
 const getApiKey = (): string | undefined => {
-  // 1. Try Vite Standard (Most likely for this project)
+  // 1. Try Vite Standard (Preferred for this project)
   // @ts-ignore
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
     // @ts-ignore
-    return import.meta.env.VITE_API_KEY;
+    if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
+    // Fallback: Try without VITE_ prefix just in case user forgot it
+    // @ts-ignore
+    if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
   }
   
   // 2. Try Create React App Standard
-  if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_KEY) {
-    return process.env.REACT_APP_API_KEY;
-  }
-
-  // 3. Try Standard Node/Server (Fallback)
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    return process.env.API_KEY;
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+    if (process.env.VITE_API_KEY) return process.env.VITE_API_KEY;
+    if (process.env.API_KEY) return process.env.API_KEY;
   }
 
   return undefined;
@@ -46,10 +46,10 @@ export const getFinancialAdvice = async (
   const apiKey = getApiKey();
 
   if (!apiKey) {
-    console.error("Masarify Error: API Key is missing.");
+    console.error("Masarify Error: API Key is missing. Checked VITE_API_KEY, REACT_APP_API_KEY, and API_KEY.");
     return language === Language.AR 
-      ? "عذراً، مفتاح الربط مع الذكاء الاصطناعي مفقود. يرجى التأكد من إعداد VITE_API_KEY في إعدادات Netlify." 
-      : "Error: API Key is missing. Please set VITE_API_KEY in your Netlify settings.";
+      ? "عذراً، مفتاح الذكاء الاصطناعي مفقود.\n1. تأكد من تسمية المفتاح VITE_API_KEY في إعدادات Netlify.\n2. تأكد من عمل Re-deploy للموقع بعد إضافة المفتاح." 
+      : "Error: API Key is missing.\n1. Set VITE_API_KEY in Netlify Environment Variables.\n2. Trigger a new deploy (Re-deploy) to apply changes.";
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -88,7 +88,7 @@ export const getFinancialAdvice = async (
   } catch (error) {
     console.error("Gemini API Error:", error);
     return language === Language.AR 
-      ? "عذراً، حدث خطأ أثناء الاتصال بالمستشار الذكي. يرجى المحاولة لاحقاً." 
-      : "Sorry, an error occurred connecting to the Smart Advisor.";
+      ? "عذراً، حدث خطأ أثناء الاتصال بالمستشار الذكي. (تحقق من صلاحية المفتاح أو الحصة المتاحة)" 
+      : "Sorry, an error occurred connecting to the Smart Advisor. (Check API Key validity or quota)";
   }
 };
