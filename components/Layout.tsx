@@ -17,16 +17,37 @@ const MasarifyLogo = ({ className = "w-10 h-10", light = false }: { className?: 
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="logoGradient" x1="0" y1="100" x2="100" y2="0">
-        <stop offset="0%" stopColor={light ? "#ffffff" : "#10b981"} />
-        <stop offset="100%" stopColor={light ? "#e2e8f0" : "#047857"} />
+        <stop offset="0%" stopColor="#10b981" /> {/* Emerald 500 */}
+        <stop offset="100%" stopColor="#047857" /> {/* Emerald 700 */}
       </linearGradient>
+      <linearGradient id="goldGradient" x1="0" y1="0" x2="100" y2="100">
+        <stop offset="0%" stopColor="#fbbf24" /> {/* Amber 400 */}
+        <stop offset="100%" stopColor="#d97706" /> {/* Amber 600 */}
+      </linearGradient>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3" />
+      </filter>
     </defs>
-    {/* Abstract Wallet/Card shape */}
-    <rect x="10" y="25" width="80" height="50" rx="12" fill="url(#logoGradient)" />
-    {/* Growth Chart Line */}
-    <path d="M25 60 L40 45 L55 55 L75 35" stroke={light ? "#10b981" : "white"} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-    {/* Dot */}
-    <circle cx="75" cy="35" r="5" fill={light ? "#10b981" : "#fbbf24"} stroke={light ? "#10b981" : "white"} strokeWidth="2" />
+    
+    {/* Base Shape: Rounded Square with Gradient */}
+    <rect x="10" y="10" width="80" height="80" rx="20" fill={light ? "white" : "url(#logoGradient)"} filter="url(#shadow)" />
+    
+    {/* Stylized 'M' Graph */}
+    <path 
+      d="M25 65 L25 45 L40 60 L60 35 L75 50" 
+      stroke={light ? "#10b981" : "white"} 
+      strokeWidth="8" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    
+    {/* Growth Dot (Golden Coin) */}
+    <circle cx="75" cy="35" r="7" fill="url(#goldGradient)" stroke={light ? "#10b981" : "white"} strokeWidth="2" />
+    
+    {/* Small ascending bars hint */}
+    <rect x="55" y="65" width="6" height="10" rx="2" fill={light ? "#e2e8f0" : "rgba(255,255,255,0.3)"} />
+    <rect x="65" y="60" width="6" height="15" rx="2" fill={light ? "#e2e8f0" : "rgba(255,255,255,0.3)"} />
+    <rect x="75" y="55" width="6" height="20" rx="2" fill={light ? "#e2e8f0" : "rgba(255,255,255,0.3)"} />
   </svg>
 );
 
@@ -65,8 +86,8 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
 
         <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-white/20 relative z-10">
-          <div className="bg-white p-5 rounded-2xl shadow-xl inline-block mb-8 transform hover:scale-105 transition-transform duration-300">
-            <MasarifyLogo className="w-20 h-20" light />
+          <div className="inline-block mb-8 transform hover:scale-105 transition-transform duration-300">
+            <MasarifyLogo className="w-24 h-24" />
           </div>
           <h2 className="text-3xl font-bold mb-2 text-white">{t.locked}</h2>
           <p className="text-emerald-100/80 mb-8 text-sm font-medium tracking-wide">Masarify Premium Security</p>
@@ -101,8 +122,8 @@ export const Layout: React.FC<LayoutProps> = ({
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20">
-              <MasarifyLogo className="w-6 h-6" light />
+            <div className="transform hover:rotate-6 transition-transform">
+              <MasarifyLogo className="w-9 h-9" />
             </div>
             <div className="flex flex-col">
                <span className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">Masarify</span>

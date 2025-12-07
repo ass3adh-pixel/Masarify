@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionManager } from './components/TransactionManager';
 import { getFinancialAdvice } from './services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info, FileSpreadsheet, ChevronRight, ChevronLeft, Loader2, HelpCircle, AlertOctagon } from 'lucide-react';
+import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info, FileSpreadsheet, ChevronRight, ChevronLeft, Loader2, HelpCircle, AlertOctagon, MessageSquare, User } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 const STORAGE_KEY = 'masarify_data_v2';
@@ -657,7 +657,7 @@ export default function App() {
                         type="text" 
                         placeholder={t.typeDelete} 
                         value={deleteKeyword}
-                        onChange={(e) => setDeleteKeyword(e.target.value)}
+                        onChange={(e) => setDeleteKeyword(e.target.value.toUpperCase())} // FORCE UPPERCASE
                         className="w-full p-3 border-2 border-red-200 rounded-xl mb-4 text-center font-bold text-red-600 focus:border-red-500 outline-none uppercase tracking-widest"
                     />
 
@@ -689,20 +689,20 @@ export default function App() {
              <div className="p-6">
                 {type === 'contact' ? (
                   <div className="space-y-6">
-                     <p className="text-slate-600 leading-relaxed">{t.contactText}</p>
+                     <p className="text-slate-600 leading-relaxed text-center">{t.contactText}</p>
                      
-                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center space-y-4">
-                       <Mail size={40} className="mx-auto text-primary" />
-                       <div>
-                         <h3 className="font-bold text-slate-800">Email Support</h3>
-                         <p className="text-sm text-slate-500 mt-1">codexazi@gmail.com</p>
+                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                       <div className="text-center mb-4">
+                           <MessageSquare size={32} className="mx-auto text-primary mb-2" />
+                           <h3 className="font-bold text-slate-800">Support Ticket</h3>
+                           <p className="text-xs text-slate-400">Secure & Confidential</p>
                        </div>
                        
                        <form 
                          name="contact" 
                          method="POST" 
                          data-netlify="true" 
-                         className="space-y-3 text-left mt-4"
+                         className="space-y-3 text-left"
                          onSubmit={(e) => {
                              e.preventDefault();
                              const formData = new FormData(e.target as HTMLFormElement);
@@ -710,14 +710,25 @@ export default function App() {
                                  method: 'POST',
                                  headers: { "Content-Type": "application/x-www-form-urlencoded" },
                                  body: new URLSearchParams(formData as any).toString()
-                             }).then(() => alert(t.savedSuccess)).catch(error => alert(error));
+                             }).then(() => { alert(t.savedSuccess); setActiveModal('none'); }).catch(error => alert(error));
                          }}
                        >
                            <input type="hidden" name="form-name" value="contact" />
-                           <input type="email" name="email" required placeholder="Your Email" className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm" />
-                           <textarea name="message" required placeholder={t.message} className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm min-h-[100px]"></textarea>
-                           <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primaryDark transition-colors">
-                               {t.send}
+                           
+                           <div className="relative">
+                               <User size={16} className="absolute top-3.5 left-3 text-slate-400" />
+                               <input type="text" name="name" placeholder="Name" className="w-full p-3 pl-10 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm bg-white" />
+                           </div>
+
+                           <div className="relative">
+                               <Mail size={16} className="absolute top-3.5 left-3 text-slate-400" />
+                               <input type="email" name="email" required placeholder="Email (for reply)" className="w-full p-3 pl-10 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm bg-white" />
+                           </div>
+
+                           <textarea name="message" required placeholder={t.message} className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-primary text-sm min-h-[120px] bg-white"></textarea>
+                           
+                           <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primaryDark transition-colors flex items-center justify-center gap-2">
+                               <Send size={18} /> {t.send}
                            </button>
                        </form>
                      </div>
