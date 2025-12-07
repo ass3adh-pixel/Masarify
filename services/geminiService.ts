@@ -57,10 +57,12 @@ export const getFinancialAdvice = async (
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: [
-        { text: `Here is my recent transaction data: ${dataString}` },
-        { text: `User Question: ${query}` }
-      ],
+      contents: {
+        parts: [
+          { text: `Here is my recent transaction data: ${dataString}` },
+          { text: `User Question: ${query}` }
+        ]
+      },
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.7,

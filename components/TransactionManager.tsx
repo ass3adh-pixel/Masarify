@@ -147,24 +147,15 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
     <div className="h-full relative pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">{t.transactions}</h1>
-        {/* Desktop Button - Only visible on Large Screens (lg) to prevent overlap on tablets/mobile */}
+        {/* Button visible on all screens (flex), text hidden on mobile (hidden sm:inline) */}
         <button 
           onClick={openAddModal}
-          className="hidden lg:flex bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+          className="flex bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95"
         >
           <Plus size={20} />
-          <span className="font-medium">{t.addTransaction}</span>
+          <span className="font-medium hidden sm:inline">{t.addTransaction}</span>
         </button>
       </div>
-
-      {/* Floating Action Button (FAB) - Visible on Mobile AND Tablets (up to lg) */}
-      <button
-        onClick={openAddModal}
-        className={`lg:hidden fixed bottom-24 ${language === Language.AR ? 'left-6' : 'right-6'} bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-full shadow-lg shadow-emerald-500/40 z-40 hover:bg-emerald-700 active:scale-90 transition-all flex items-center justify-center ring-4 ring-slate-50`}
-        aria-label={t.addTransaction}
-      >
-        <Plus size={28} />
-      </button>
 
       {/* Search - Sticky only on Desktop to save space on mobile */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4 flex items-center gap-3 sticky top-16 z-30 lg:top-20">
