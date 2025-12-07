@@ -21,26 +21,8 @@ export const getFinancialAdvice = async (
   language: Language,
   currency: string
 ): Promise<string> => {
-  // Robustly check for API Key in different environments
-  let apiKey = '';
-  
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    apiKey = process.env.API_KEY;
-  } 
-  // @ts-ignore - Check for Vite/Client side env injection if process is missing
-  else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
-    // @ts-ignore
-    apiKey = import.meta.env.VITE_API_KEY;
-  }
-
-  if (!apiKey) {
-    console.warn("API Key is missing. Check server configuration (Netlify Environment Variables).");
-    return language === Language.AR 
-      ? "عذراً، مفتاح API غير متوفر. يرجى التأكد من إضافة 'API_KEY' في إعدادات البيئة (Netlify Environment Variables)." 
-      : "API Key is missing. Please add 'API_KEY' to your Netlify Environment Variables.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // Fix: Use process.env.API_KEY directly as per coding guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const simplifiedData = processTransactionsForAI(transactions, categories, currency);
   const dataString = JSON.stringify(simplifiedData.slice(0, 50)); // Limit to last 50 for context

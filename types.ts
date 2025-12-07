@@ -186,6 +186,12 @@ You acknowledge that you are solely responsible for the security of your device 
 3. Financial Advice Disclaimer:
 The "Smart Advisor" feature is an AI-driven tool provided for informational purposes only. It does not constitute professional financial advice. Always consult with a certified financial planner for major financial decisions.`,
     contactText: 'We value your feedback and are here to assist you. For technical support, feature requests, or business inquiries, please reach out to our dedicated support team.',
+    dangerZone: 'Danger Zone',
+    resetData: 'Reset All Data',
+    resetConfirmTitle: 'Factory Reset?',
+    resetConfirmMessage: 'This will wipe ALL data, settings, and transactions. The app will return to its initial state.\n\nType "DELETE" below to confirm.',
+    typeDelete: 'Type DELETE',
+    resetSuccess: 'App has been reset successfully.',
   },
   [Language.AR]: {
     dashboard: 'لوحة التحكم',
@@ -288,6 +294,12 @@ The "Smart Advisor" feature is an AI-driven tool provided for informational purp
 3. إخلاء المسؤولية المالية:
 ميزة "المستشار الذكي" هي أداة مساعدة تعتمد على الذكاء الاصطناعي وتُقدم لأغراض معلوماتية فقط. لا تعتبر هذه المعلومات نصيحة مالية مهنية ملزمة. استشر دائماً مخططاً مالياً معتمداً للقرارات المالية الكبرى.`,
     contactText: 'نحن نقدر ملاحظاتكم ونسعد بمساعدتكم. للدعم الفني، أو طلب الميزات، أو الاستفسارات التجارية، يرجى التواصل مع فريق الدعم المخصص لدينا.',
+    dangerZone: 'منطقة الخطر',
+    resetData: 'مسح كافة البيانات',
+    resetConfirmTitle: 'ضبط المصنع؟',
+    resetConfirmMessage: 'سيؤدي هذا الإجراء إلى مسح جميع المعاملات والإعدادات والبيانات. سيعود التطبيق إلى حالته الأولية.\n\nاكتب كلمة "DELETE" في الأسفل للتأكيد.',
+    typeDelete: 'اكتب DELETE',
+    resetSuccess: 'تم إعادة تعيين التطبيق بنجاح.',
   }
 };
 

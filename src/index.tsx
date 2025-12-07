@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Component, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -8,8 +8,7 @@ if (!rootElement) {
 }
 
 interface ErrorBoundaryProps {
-  // Fix: Make children optional to avoid type errors in usage
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -17,9 +16,9 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly declare state and props to satisfy TypeScript compiler
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = { hasError: false, error: null };
+  // Fix: Explicitly declare props to satisfy TypeScript compiler
   public readonly props: Readonly<ErrorBoundaryProps>;
 
   constructor(props: ErrorBoundaryProps) {

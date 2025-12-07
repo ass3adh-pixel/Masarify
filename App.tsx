@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionManager } from './components/TransactionManager';
 import { getFinancialAdvice } from './services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info, FileSpreadsheet, ChevronRight, ChevronLeft, Loader2, HelpCircle } from 'lucide-react';
+import { Send, Download, Upload, Lock, AlertTriangle, Save, CheckCircle, List, Trash2, Edit2, Plus, X, Mail, Shield, FileText, Info, FileSpreadsheet, ChevronRight, ChevronLeft, Loader2, HelpCircle, AlertOctagon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 const STORAGE_KEY = 'masarify_data_v2';
@@ -42,6 +42,9 @@ export default function App() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [loading, setLoading] = useState(true);
+
+  // Lifted Modal State for Add Transaction (accessible from Layout)
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   // Load from local storage
   useEffect(() => {
@@ -314,7 +317,7 @@ export default function App() {
     const [localBudget, setLocalBudget] = useState(state.budget);
     const [localPin, setLocalPin] = useState(state.pin);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
-    const [activeModal, setActiveModal] = useState<'none' | 'categories' | 'about' | 'privacy' | 'terms' | 'contact'>('none');
+    const [activeModal, setActiveModal] = useState<'none' | 'categories' | 'about' | 'privacy' | 'terms' | 'contact' | 'reset'>('none');
     
     // Restore Modal State
     const [showRestoreModal, setShowRestoreModal] = useState(false);
@@ -328,6 +331,9 @@ export default function App() {
       nameEn: '', nameAr: '', icon: 'Circle', color: '#10b981', type: TransactionType.EXPENSE, budgetLimit: 0 
     });
 
+    // Reset Confirm
+    const [deleteKeyword, setDeleteKeyword] = useState('');
+
     const handleSave = () => {
       setState(prev => ({
         ...prev,
@@ -340,6 +346,15 @@ export default function App() {
 
     const handleRestoreClick = () => {
       setShowRestoreModal(true);
+    };
+
+    const handleResetData = () => {
+      // Use trim() to ignore accidental spaces
+      if (deleteKeyword.trim() === 'DELETE') {
+        localStorage.clear();
+        // Use href='/'; to properly reset the app state without 404 errors on some hosts
+        window.location.href = '/';
+      }
     };
 
     const performImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,7 +386,7 @@ export default function App() {
             // Brief delay for UX then reload
             setTimeout(() => {
               alert(t.importSuccess);
-              window.location.reload(); // Reload to ensure clean state
+              window.location.href = '/'; // Safer reload
             }, 1000);
             
           } else {
@@ -494,8 +509,9 @@ export default function App() {
                   <Plus size={20} /> {t.addCategory}
                 </button>
                 {state.categories.map(cat => {
+                  // FIXED: Used cat.icon instead of undefined iconName
                   // @ts-ignore
-                  const Icon = LucideIcons[iconName] || LucideIcons.Circle;
+                  const Icon = LucideIcons[cat.icon] || LucideIcons.Circle;
                   return (
                     <div key={cat.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
                       <div className="flex items-center gap-3">
@@ -617,13 +633,50 @@ export default function App() {
       </div>
     );
 
-    const renderStaticModal = (type: 'about' | 'privacy' | 'terms' | 'contact') => {
+    const renderStaticModal = (type: 'about' | 'privacy' | 'terms' | 'contact' | 'reset') => {
       let title = '', content: any = null;
       switch(type) {
         case 'about': title = t.aboutUs; content = t.aboutText; break;
         case 'privacy': title = t.privacyPolicy; content = t.privacyText; break;
         case 'terms': title = t.termsOfService; content = t.termsText; break;
         case 'contact': title = t.contactUs; break;
+        case 'reset': title = t.dangerZone; break;
+      }
+
+      if (type === 'reset') {
+         return (
+            <div className="fixed inset-0 bg-red-900/80 z-[60] flex items-center justify-center p-4 backdrop-blur-md">
+                <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center animate-in fade-in zoom-in border-4 border-red-100">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 animate-pulse">
+                        <AlertOctagon size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">{t.resetConfirmTitle}</h3>
+                    <p className="text-slate-500 mb-6 text-sm leading-relaxed whitespace-pre-line">{t.resetConfirmMessage}</p>
+                    
+                    <input 
+                        type="text" 
+                        placeholder={t.typeDelete} 
+                        value={deleteKeyword}
+                        onChange={(e) => setDeleteKeyword(e.target.value)}
+                        className="w-full p-3 border-2 border-red-200 rounded-xl mb-4 text-center font-bold text-red-600 focus:border-red-500 outline-none uppercase tracking-widest"
+                    />
+
+                    <div className="flex gap-3">
+                        <button onClick={() => { setActiveModal('none'); setDeleteKeyword(''); }} className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">
+                            {t.cancel}
+                        </button>
+                        <button 
+                            onClick={handleResetData}
+                            // Allow space at end for mobile keyboards
+                            disabled={deleteKeyword.trim() !== 'DELETE'}
+                            className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            RESET
+                        </button>
+                    </div>
+                </div>
+            </div>
+         )
       }
 
       return (
@@ -683,13 +736,13 @@ export default function App() {
       );
     };
 
-    const InfoRow = ({ icon: Icon, label, onClick }: any) => (
-      <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors group">
-         <div className="flex items-center gap-3 text-slate-700 font-medium">
-            <Icon size={20} className="text-slate-400 group-hover:text-primary transition-colors" />
+    const InfoRow = ({ icon: Icon, label, onClick, danger = false }: any) => (
+      <button onClick={onClick} className={`w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors group ${danger ? 'text-red-600 hover:bg-red-50' : ''}`}>
+         <div className="flex items-center gap-3 font-medium text-inherit">
+            <Icon size={20} className={`transition-colors ${danger ? 'text-red-400 group-hover:text-red-600' : 'text-slate-400 group-hover:text-primary'}`} />
             <span>{label}</span>
          </div>
-         {state.language === Language.AR ? <ChevronLeft size={16} className="text-slate-300"/> : <ChevronRight size={16} className="text-slate-300"/>}
+         {state.language === Language.AR ? <ChevronLeft size={16} className={danger ? "text-red-300" : "text-slate-300"}/> : <ChevronRight size={16} className={danger ? "text-red-300" : "text-slate-300"}/>}
       </button>
     );
 
@@ -706,7 +759,7 @@ export default function App() {
 
         {/* Modals */}
         {activeModal === 'categories' && renderCategoryModal()}
-        {['about', 'privacy', 'terms', 'contact'].includes(activeModal) && renderStaticModal(activeModal as any)}
+        {['about', 'privacy', 'terms', 'contact', 'reset'].includes(activeModal) && renderStaticModal(activeModal as any)}
         
         {/* Restore Warning Modal */}
         {showRestoreModal && (
@@ -933,6 +986,17 @@ export default function App() {
               <InfoRow icon={FileText} label={t.termsOfService} onClick={() => setActiveModal('terms')} />
            </div>
         </div>
+
+        {/* DANGER ZONE */}
+        <div className="bg-red-50 rounded-2xl shadow-sm border border-red-100 overflow-hidden">
+           <h2 className="font-bold text-red-700 p-6 pb-2 border-b border-red-100 flex items-center gap-2">
+             <AlertOctagon size={18} />
+             {t.dangerZone}
+           </h2>
+           <div>
+              <InfoRow icon={Trash2} label={t.resetData} onClick={() => setActiveModal('reset')} danger />
+           </div>
+        </div>
         
         {/* Ad Space */}
         <div className="w-full h-20 bg-gradient-to-r from-slate-100 to-slate-200 border border-slate-200 border-dashed rounded-xl flex items-center justify-center text-slate-500 shadow-inner">
@@ -958,6 +1022,12 @@ export default function App() {
         }
         return false;
       }}
+      onAddTransactionClick={() => {
+        // Switch to Transactions view and Open Modal
+        // setCurrentView(View.TRANSACTIONS);
+        // We will control modal via state lifted here
+        setShowTransactionModal(true);
+      }}
     >
       {currentView === View.DASHBOARD && <Dashboard transactions={state.transactions} categories={state.categories} budget={state.budget} language={state.language} currency={state.currency} />}
       {currentView === View.TRANSACTIONS && (
@@ -970,11 +1040,31 @@ export default function App() {
           onAddTransaction={addTransaction}
           onUpdateTransaction={updateTransaction}
           onDeleteTransaction={deleteTransaction}
+          showModal={showTransactionModal}
+          onCloseModal={() => setShowTransactionModal(false)}
         />
       )}
       {currentView === View.REPORTS && <ReportsView />}
       {currentView === View.ADVISOR && <AdvisorView />}
       {currentView === View.SETTINGS && <SettingsView />}
+
+      {/* Global Transaction Modal (if not in Transactions view, we render it over) */}
+      {currentView !== View.TRANSACTIONS && showTransactionModal && (
+        <div className="fixed inset-0 z-[100]">
+             <TransactionManager 
+                transactions={state.transactions} 
+                categories={state.categories} 
+                accounts={state.accounts} 
+                language={state.language}
+                currency={state.currency}
+                onAddTransaction={addTransaction}
+                onUpdateTransaction={updateTransaction}
+                onDeleteTransaction={deleteTransaction}
+                showModal={showTransactionModal}
+                onCloseModal={() => setShowTransactionModal(false)}
+            />
+        </div>
+      )}
     </Layout>
   );
 }

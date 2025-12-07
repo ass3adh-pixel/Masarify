@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Transaction, Category, Account, Language, TRANSLATIONS, TransactionType, Currency } from '../types';
-import { Plus, Search, Camera, X, Image as ImageIcon, Trash2, Filter, Edit2, AlertTriangle } from 'lucide-react';
+import { Search, Camera, X, Image as ImageIcon, Trash2, Filter, Edit2, AlertTriangle, Plus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 interface TransactionManagerProps {
@@ -12,6 +12,10 @@ interface TransactionManagerProps {
   onDeleteTransaction: (id: string) => void;
   language: Language;
   currency: Currency;
+  
+  // New props for controlling modal from outside
+  showModal: boolean;
+  onCloseModal: () => void;
 }
 
 export const TransactionManager: React.FC<TransactionManagerProps> = ({
@@ -22,10 +26,11 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
   onUpdateTransaction,
   onDeleteTransaction,
   language,
-  currency
+  currency,
+  showModal,
+  onCloseModal
 }) => {
   const t = TRANSLATIONS[language];
-  const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   
@@ -39,6 +44,8 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
   const [note, setNote] = useState('');
   const [receiptImage, setReceiptImage] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isRTL = language === Language.AR;
 
   // Filtered categories for dropdown based on selected type
   const availableCategories = categories.filter(c => c.type === type);
@@ -65,10 +72,12 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
     setCategoryId('');
   };
 
-  const openAddModal = () => {
-    resetForm();
-    setShowModal(true);
-  };
+  // Watch for external modal open (Reset if new add)
+  useEffect(() => {
+    if (showModal && !editingId) {
+       resetForm();
+    }
+  }, [showModal]);
 
   const openEditModal = (tr: Transaction) => {
     setEditingId(tr.id);
@@ -79,7 +88,6 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
     setAccountId(tr.accountId);
     setNote(tr.note || '');
     setReceiptImage(tr.receiptImage);
-    setShowModal(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,7 +110,7 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
       onAddTransaction(transactionData);
     }
 
-    setShowModal(false);
+    onCloseModal();
     resetForm();
   };
 
@@ -147,17 +155,17 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
     <div className="h-full relative pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">{t.transactions}</h1>
-        {/* Button visible on all screens (flex), text hidden on mobile (hidden sm:inline) */}
+        {/* Mobile/Tablet/Desktop Top Button (Always Visible) */}
         <button 
-          onClick={openAddModal}
-          className="flex bg-gradient-to-r from-primary to-emerald-600 hover:from-primaryDark hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+          onClick={() => { resetForm(); if(onCloseModal) onCloseModal(); else { /* Trigger open via parent if needed? Parent controls visibility */ } }}
+          className="bg-primary text-white py-2 px-4 rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 hover:bg-primaryDark transition-all active:scale-95 z-10"
         >
           <Plus size={20} />
-          <span className="font-medium hidden sm:inline">{t.addTransaction}</span>
+          <span className="font-bold hidden sm:inline">{t.addTransaction}</span>
         </button>
       </div>
 
-      {/* Search - Sticky only on Desktop to save space on mobile */}
+      {/* Search */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4 flex items-center gap-3 sticky top-16 z-30 lg:top-20">
         <Search className="text-slate-400" size={20} />
         <input 
@@ -233,7 +241,7 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
         )}
       </div>
 
-      {/* Delete Confirmation Modal - High Z-Index */}
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center transform transition-all scale-100">
@@ -260,14 +268,14 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
         </div>
       )}
 
-      {/* Add/Edit Modal - High Z-Index */}
-      {showModal && (
+      {/* Add/Edit Modal */}
+      {(showModal || editingId) && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-100">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800">{editingId ? t.editTransaction : t.addTransaction}</h2>
-                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => { onCloseModal(); setEditingId(null); }} className="text-slate-400 hover:text-slate-600">
                   <X size={24} />
                 </button>
               </div>
@@ -302,10 +310,15 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
                       required
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full p-4 rounded-2xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-3xl font-bold text-slate-800 placeholder-slate-300 transition-all"
+                      className={`w-full p-4 rounded-2xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-3xl font-bold text-slate-800 placeholder-slate-300 transition-all ${isRTL ? 'text-right pl-20' : 'text-left pr-20'}`}
                       placeholder="0.00"
+                      dir="ltr"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">{currency.code}</span>
+                    <span 
+                        className={`absolute top-1/2 -translate-y-1/2 text-slate-400 font-medium ${isRTL ? 'left-4' : 'right-4'}`}
+                    >
+                        {currency.code}
+                    </span>
                   </div>
                 </div>
 
@@ -400,7 +413,7 @@ export const TransactionManager: React.FC<TransactionManagerProps> = ({
                 <div className="pt-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => { onCloseModal(); setEditingId(null); }}
                     className="flex-1 py-3.5 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
                   >
                     {t.cancel}

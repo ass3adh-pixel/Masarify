@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Receipt, PieChart, Bot, Settings, Lock } from 'lucide-react';
+import { LayoutDashboard, Receipt, PieChart, Bot, Settings, Lock, Plus } from 'lucide-react';
 import { View, Language, TRANSLATIONS } from '../types';
 
 interface LayoutProps {
@@ -9,6 +9,7 @@ interface LayoutProps {
   isAuthenticated: boolean;
   pin: string | null;
   onUnlock: (pin: string) => boolean;
+  onAddTransactionClick: () => void;
   children: React.ReactNode;
 }
 
@@ -36,6 +37,7 @@ export const Layout: React.FC<LayoutProps> = ({
   isAuthenticated,
   pin,
   onUnlock,
+  onAddTransactionClick,
   children,
 }) => {
   const t = TRANSLATIONS[language];
@@ -93,7 +95,7 @@ export const Layout: React.FC<LayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 transition-all" dir={dir}>
       
-      {/* Top Navigation Header (Replaces Sidebar) */}
+      {/* Top Navigation Header */}
       <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-b border-slate-200 z-50 h-16 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           
@@ -118,6 +120,13 @@ export const Layout: React.FC<LayoutProps> = ({
 
           {/* Spacer / Version Badge */}
           <div className="hidden md:flex items-center gap-2">
+             <button 
+                onClick={onAddTransactionClick}
+                className="bg-primary text-white p-2 rounded-lg hover:bg-primaryDark transition-colors shadow-lg shadow-emerald-500/20 active:scale-95"
+                title={t.addTransaction}
+             >
+                <Plus size={20} />
+             </button>
              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-200">PRO</span>
           </div>
         </div>
@@ -129,12 +138,22 @@ export const Layout: React.FC<LayoutProps> = ({
       </main>
 
       {/* Mobile Bottom Navigation (Visible only on small screens) */}
-      <div className={`fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 md:hidden flex justify-around p-3 pb-safe z-30 shadow-[0_-4px_30px_rgba(0,0,0,0.05)]`}>
-        <MobileNavButton active={currentView === View.DASHBOARD} onClick={() => setCurrentView(View.DASHBOARD)} icon={<LayoutDashboard size={24} />} />
-        <MobileNavButton active={currentView === View.TRANSACTIONS} onClick={() => setCurrentView(View.TRANSACTIONS)} icon={<Receipt size={24} />} />
-        <MobileNavButton active={currentView === View.ADVISOR} onClick={() => setCurrentView(View.ADVISOR)} icon={<div className="bg-gradient-to-tr from-emerald-500 to-teal-400 p-4 rounded-full -mt-12 shadow-xl shadow-emerald-500/30 text-white ring-8 ring-slate-50 border border-white/20"><Bot size={28} /></div>} />
-        <MobileNavButton active={currentView === View.REPORTS} onClick={() => setCurrentView(View.REPORTS)} icon={<PieChart size={24} />} />
-        <MobileNavButton active={currentView === View.SETTINGS} onClick={() => setCurrentView(View.SETTINGS)} icon={<Settings size={24} />} />
+      <div className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 md:hidden flex justify-between px-6 py-2 pb-safe z-30 shadow-[0_-4px_30px_rgba(0,0,0,0.05)] items-end`}>
+        <MobileNavButton active={currentView === View.DASHBOARD} onClick={() => setCurrentView(View.DASHBOARD)} icon={<LayoutDashboard size={22} />} label={t.dashboard} />
+        <MobileNavButton active={currentView === View.TRANSACTIONS} onClick={() => setCurrentView(View.TRANSACTIONS)} icon={<Receipt size={22} />} label={t.transactions} />
+        
+        {/* Central Add Button */}
+        <div className="relative -top-5">
+           <button 
+             onClick={onAddTransactionClick}
+             className="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 border-4 border-slate-50 transform transition-transform active:scale-90 hover:-translate-y-1"
+           >
+             <Plus size={30} strokeWidth={3} />
+           </button>
+        </div>
+
+        <MobileNavButton active={currentView === View.REPORTS} onClick={() => setCurrentView(View.REPORTS)} icon={<PieChart size={22} />} label={t.reports} />
+        <MobileNavButton active={currentView === View.SETTINGS} onClick={() => setCurrentView(View.SETTINGS)} icon={<Settings size={22} />} label={t.settings} />
       </div>
     </div>
   );
@@ -154,11 +173,12 @@ const TopNavButton = ({ active, onClick, icon, label, highlight }: any) => (
   </button>
 );
 
-const MobileNavButton = ({ active, onClick, icon }: any) => (
+const MobileNavButton = ({ active, onClick, icon, label }: any) => (
   <button
     onClick={onClick}
-    className={`p-2 rounded-2xl transition-all duration-300 ${active ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-slate-600'}`}
+    className={`flex flex-col items-center gap-1 p-1 rounded-xl transition-all duration-300 ${active ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
   >
     {icon}
+    <span className="text-[10px] font-medium">{label}</span>
   </button>
 );
